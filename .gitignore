@@ -1,0 +1,18 @@
+# Ambienti virtuali (FONDAMENTALE NON CARICARLO!)
+venv/
+.venv/
+env/
+
+# File temporanei e cache di Python
+__pycache__/
+*.pyc
+
+# DATI SENSIBILI E TOKEN (FONDAMENTALE!)
+.env
+
+# Database locale (non vogliamo caricare i dati dei tuoi utenti online)
+bot_database.db
+bot_database.db-journal
+
+# Eventuali file di Log
+*.log
