@@ -14,20 +14,23 @@ logging.basicConfig(level=logging.INFO)
 
 load_dotenv()
 TOKEN = str(os.getenv("TOKEN"))
-ADMIN_ID = int(os.getenv("ADMIN_ID", 0))
+ADMIN_ID = os.getenv("ADMIN_ID")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
 
 # ==========================================
-# GESTIONE COMANDO /START E /LISTA
+# GESTIONE COMANDO /START
 # ==========================================
 @dp.message(CommandStart())
 async def comando_start(message: types.Message):
-    if message.chat.type == "private":
+    if message.from_user and message.from_user.id == ADMIN_ID:
         await message.reply("Sono operativo! Usa /lista per vedere i gruppi.")
 
+# ==========================================
+# GESTIONE COMANDO /LISTA
+# ==========================================
 @dp.message(Command("lista"))
 async def comando_lista(message: types.Message):
     if message.from_user and message.from_user.id == ADMIN_ID:
@@ -52,7 +55,7 @@ async def comando_autorizza(message: types.Message, command: CommandObject):
         nome = (message.chat.title or "Gruppo senza nome") if not command.args else "Aggiunto tramite ID (Da remoto)"
         
         await database.autorizza_gruppo(target_id, nome)
-        await message.reply(f"✅ Permesso accordato per: {nome} (`{target_id}`)")
+        await message.reply("✅ Gruppo autorizzato)")
 
 # ==========================================
 # GESTIONE COMANDO /REVOCA
@@ -63,7 +66,7 @@ async def comando_revoca(message: types.Message, command: CommandObject):
         target_id = command.args.strip() if command.args else str(message.chat.id)
         
         await database.revoca_gruppo(target_id)
-        await message.reply(f"⛔ Permesso revocato per il gruppo: {target_id}")
+        await message.reply("⛔ Permesso revocato")
         
         try:
             await bot.leave_chat(target_id)
