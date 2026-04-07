@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 
 load_dotenv()
 TOKEN = str(os.getenv("TOKEN"))
-ADMIN_ID = os.getenv("ADMIN_ID")
+ADMIN_ID = int(os.getenv("ADMIN_ID",0))
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -26,7 +26,7 @@ dp = Dispatcher()
 @dp.message(CommandStart())
 async def comando_start(message: types.Message):
     if message.from_user and message.from_user.id == ADMIN_ID:
-        await message.reply("Sono operativo! Usa /lista per vedere i gruppi.")
+        await message.reply("Sono operativo! Usa /comandi per vedere tutti i comandi disponibili.")
 
 # ==========================================
 # GESTIONE COMANDO /LISTA
@@ -55,7 +55,7 @@ async def comando_autorizza(message: types.Message, command: CommandObject):
         nome = (message.chat.title or "Gruppo senza nome") if not command.args else "Aggiunto tramite ID (Da remoto)"
         
         await database.autorizza_gruppo(target_id, nome)
-        await message.reply("✅ Gruppo autorizzato)")
+        await message.reply("✅ Gruppo autorizzato")
 
 # ==========================================
 # GESTIONE COMANDO /REVOCA
@@ -73,6 +73,25 @@ async def comando_revoca(message: types.Message, command: CommandObject):
         except Exception:
             pass
 
+# ==========================================
+# GESTIONE COMANDO /COMANDI
+# ==========================================
+@dp.message(Command("comandi"))
+async def comando_comandi(message: types.Message):
+    # Risponde solo in privato e solo a te!
+    if message.chat.type == "private" and message.from_user and message.from_user.id == ADMIN_ID:
+        testo = (
+            "🛠️ **PANNELLO DI CONTROLLO COMANDI**\n\n"
+            "Ecco cosa posso fare per te:\n\n"
+            "🔹 `/start` - Verifica se sono operativo.\n"
+            "🔹 `/lista` - Mostra la rubrica dei gruppi autorizzati e i loro ID.\n"
+            "🔹 `/comandi` - Mostra questo libretto di istruzioni.\n\n"
+            "🔹 `/autorizza` - (Usato nel gruppo) Mi autorizza a lavorare lì.\n"
+            "🔹 `/autorizza [ID]` - (In privato) Autorizza un gruppo a distanza.\n"
+            "🔹 `/revoca` - (Usato nel gruppo) Toglie il permesso e mi fa uscire.\n"
+            "🔹 `/revoca [ID]` - (In privato) Toglie il permesso ed esco a distanza."
+        )
+        await message.reply(testo, parse_mode="Markdown")
 
 # ==========================================
 # GESTIONE FOTO E VIDEO
