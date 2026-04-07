@@ -83,9 +83,9 @@ async def comando_comandi(message: types.Message):
         testo = (
             "🛠️ **PANNELLO DI CONTROLLO COMANDI**\n\n"
             "Ecco cosa posso fare per te:\n\n"
-            "🔹 `/start` - Verifica se sono operativo.\n"
-            "🔹 `/lista` - Mostra la rubrica dei gruppi autorizzati e i loro ID.\n"
-            "🔹 `/comandi` - Mostra questo libretto di istruzioni.\n\n"
+            "🔹 `/start` - (In privato) Verifica se sono operativo.\n"
+            "🔹 `/lista` - (In privato) Mostra la rubrica dei gruppi autorizzati e i loro ID.\n"
+            "🔹 `/comandi` - (In privato) Mostra questo libretto di istruzioni.\n\n"
             "🔹 `/autorizza` - (Usato nel gruppo) Mi autorizza a lavorare lì.\n"
             "🔹 `/autorizza [ID]` - (In privato) Autorizza un gruppo a distanza.\n"
             "🔹 `/revoca` - (Usato nel gruppo) Toglie il permesso e mi fa uscire.\n"

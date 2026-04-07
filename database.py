@@ -105,7 +105,8 @@ async def autorizza_gruppo(id_gruppo: str, nome_gruppo: str = "Sconosciuto"):
 async def revoca_gruppo(id_gruppo: str):
     """Rimuove un gruppo dalla lista VIP."""
     async with aiosqlite.connect(NOME_DB) as db:
-        await db.execute('DELETE FROM gruppi_autorizzati WHERE id_gruppo = ?', (id_gruppo,))
+        await db.execute("DELETE FROM gruppi_autorizzati WHERE id_gruppo = ?", (id_gruppo,))
+        await db.execute("DELETE FROM file_salvati WHERE id_gruppo = ?", (id_gruppo,))
         await db.commit()
 
 async def controlla_permesso_e_nome(id_gruppo: str):
