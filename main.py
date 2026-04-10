@@ -6,7 +6,7 @@ import imagehash
 from PIL import Image
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, F, types
-from aiogram.filters import CommandStart, Command, CommandObject # Aggiunto CommandObject!
+from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.exceptions import TelegramBadRequest
 import database
 
@@ -14,59 +14,58 @@ logging.basicConfig(level=logging.INFO)
 
 load_dotenv()
 TOKEN = str(os.getenv("TOKEN"))
-ADMIN_ID = int(os.getenv("ADMIN_ID",0))
+ADMIN_ID = int(os.getenv("ADMIN_ID", 0))
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-
 # ==========================================
-# GESTIONE COMANDO /START
+# /START COMMAND HANDLER
 # ==========================================
 @dp.message(CommandStart())
-async def comando_start(message: types.Message):
+async def start_command(message: types.Message):
     if message.from_user and message.from_user.id == ADMIN_ID:
-        await message.reply("Sono operativo! Usa /comandi per vedere tutti i comandi disponibili.")
+        await message.reply("Bot is online! Use /commands to see available actions.")
 
 # ==========================================
-# GESTIONE COMANDO /LISTA
+# /LIST COMMAND HANDLER
 # ==========================================
-@dp.message(Command("lista"))
-async def comando_lista(message: types.Message):
+@dp.message(Command("list"))
+async def list_command(message: types.Message):
     if message.from_user and message.from_user.id == ADMIN_ID:
-        gruppi_vip = await database.ottieni_lista_autorizzati()
-        if not gruppi_vip:
-            await message.reply("📭 Nessun gruppo autorizzato al momento.")
+        authorized_groups = await database.get_authorized_groups()
+        if not authorized_groups:
+            await message.reply("📭 No authorized groups at the moment.")
             return
-        testo = "📋 **Lista Gruppi Autorizzati:**\n\n"
-        for id_gruppo, nome_gruppo in gruppi_vip:
-            nome = nome_gruppo if nome_gruppo else "Nome sconosciuto"
-            testo += f"🔹 {nome}\nID: `{id_gruppo}`\n\n"
-        await message.reply(testo, parse_mode="Markdown")
-
+        
+        text = "📋 **Authorized Groups List:**\n\n"
+        for group_id, group_name in authorized_groups:
+            name = group_name if group_name else "Unknown Name"
+            text += f"🔹 {name}\nID: `{group_id}`\n\n"
+        await message.reply(text, parse_mode="Markdown")
 
 # ==========================================
-# GESTIONE COMANDO /AUTORIZZA
+# /AUTHORIZE COMMAND HANDLER
 # ==========================================
-@dp.message(Command("autorizza"))
-async def comando_autorizza(message: types.Message, command: CommandObject):
+@dp.message(Command("authorize"))
+async def authorize_command(message: types.Message, command: CommandObject):
     if message.from_user and message.from_user.id == ADMIN_ID:
         target_id = command.args.strip() if command.args else str(message.chat.id)
-        nome = (message.chat.title or "Gruppo senza nome") if not command.args else "Aggiunto tramite ID (Da remoto)"
+        name = (message.chat.title or "Unnamed Group") if not command.args else "Added via ID (Remote)"
         
-        await database.autorizza_gruppo(target_id, nome)
-        await message.reply("✅ Gruppo autorizzato")
+        await database.authorize_group(target_id, name)
+        await message.reply("✅ Group authorized successfully.")
 
 # ==========================================
-# GESTIONE COMANDO /REVOCA
+# /REVOKE COMMAND HANDLER
 # ==========================================
-@dp.message(Command("revoca"))
-async def comando_revoca(message: types.Message, command: CommandObject):
+@dp.message(Command("revoke"))
+async def revoke_command(message: types.Message, command: CommandObject):
     if message.from_user and message.from_user.id == ADMIN_ID:
         target_id = command.args.strip() if command.args else str(message.chat.id)
         
-        await database.revoca_gruppo(target_id)
-        await message.reply("⛔ Permesso revocato")
+        await database.revoke_group(target_id)
+        await message.reply("⛔ Permission revoked.")
         
         try:
             await bot.leave_chat(target_id)
@@ -74,125 +73,128 @@ async def comando_revoca(message: types.Message, command: CommandObject):
             pass
 
 # ==========================================
-# GESTIONE COMANDO /COMANDI
+# /COMMANDS COMMAND HANDLER
 # ==========================================
-@dp.message(Command("comandi"))
-async def comando_comandi(message: types.Message):
-    # Risponde solo in privato e solo a te!
+@dp.message(Command("commands"))
+async def commands_command(message: types.Message):
+    # Only reply in private chat to the admin
     if message.chat.type == "private" and message.from_user and message.from_user.id == ADMIN_ID:
-        testo = (
-            "🛠️ **PANNELLO DI CONTROLLO COMANDI**\n\n"
-            "Ecco cosa posso fare per te:\n\n"
-            "🔹 `/start` - (In privato) Verifica se sono operativo.\n"
-            "🔹 `/lista` - (In privato) Mostra la rubrica dei gruppi autorizzati e i loro ID.\n"
-            "🔹 `/comandi` - (In privato) Mostra questo libretto di istruzioni.\n\n"
-            "🔹 `/autorizza` - (Usato nel gruppo) Mi autorizza a lavorare lì.\n"
-            "🔹 `/autorizza [ID]` - (In privato) Autorizza un gruppo a distanza.\n"
-            "🔹 `/revoca` - (Usato nel gruppo) Toglie il permesso e mi fa uscire.\n"
-            "🔹 `/revoca [ID]` - (In privato) Toglie il permesso ed esco a distanza."
+        text = (
+            "🛠️ **CONTROL PANEL**\n\n"
+            "Available commands:\n\n"
+            "🔹 `/start` - Check bot status.\n"
+            "🔹 `/list` - Show authorized groups and their IDs.\n"
+            "🔹 `/commands` - Show this help message.\n\n"
+            "🔹 `/authorize` - (In group) Authorize the bot for the current group.\n"
+            "🔹 `/authorize [ID]` - (In private) Authorize a group remotely.\n"
+            "🔹 `/revoke` - (In group) Revoke permission and make the bot leave.\n"
+            "🔹 `/revoke [ID]` - (In private) Revoke permission remotely."
         )
-        await message.reply(testo, parse_mode="Markdown")
+        await message.reply(text, parse_mode="Markdown")
 
 # ==========================================
-# GESTIONE FOTO E VIDEO
+# MEDIA HANDLER (DUPLICATE DETECTION)
 # ==========================================
 @dp.message(F.photo | F.video)
-async def gestisci_media(message: types.Message, bot: Bot):
-    id_gruppo = str(message.chat.id)
+async def handle_media(message: types.Message, bot: Bot):
+    group_id = str(message.chat.id)
 
-    # --- LO SCUDO ---
-    nome_salvato_nel_db = await database.controlla_permesso_e_nome(id_gruppo)
+    # Check permissions and update group name if necessary
+    saved_group_name = await database.check_permission_and_name(group_id)
     
-    if nome_salvato_nel_db is None:
+    if saved_group_name is None:
         return
 
-    nome_attuale = message.chat.title or "Chat Privata"
+    current_name = message.chat.title or "Private Chat"
     
-    if nome_salvato_nel_db != nome_attuale:
-        await database.autorizza_gruppo(id_gruppo, nome_attuale)
-        logging.info(f"🔄 Nome del gruppo aggiornato nel DB: {nome_attuale}")
+    if saved_group_name != current_name:
+        await database.authorize_group(group_id, current_name)
+        logging.info(f"🔄 Group name updated in DB: {current_name}")
 
-    id_messaggio = message.message_id
-    doppione_trovato = False
-    id_messaggio_originale = None
+    message_id = message.message_id
+    duplicate_found = False
+    original_message_id = None
 
-    # --- CASO FOTO ---
+    # --- PHOTO HANDLING ---
     if message.photo:
         try:
-            foto = message.photo[-1]
-            id_univoco_telegram = foto.file_unique_id
-            risultato_veloce = await database.controllo_id(id_gruppo, id_univoco_telegram)
+            photo = message.photo[-1]
+            telegram_unique_id = photo.file_unique_id
             
-            if risultato_veloce:
-                doppione_trovato = True
-                id_messaggio_originale = risultato_veloce
-                logging.info("Doppione trovato tramite ID")
+            # Fast check using Telegram's unique ID
+            fast_check_result = await database.check_id(group_id, telegram_unique_id)
+            
+            if fast_check_result:
+                duplicate_found = True
+                original_message_id = fast_check_result
+                logging.info("Duplicate found via Telegram ID")
             else:
-                logging.info("ID nuovo, scarico l'immagine per il controllo Hash...")
-                file_in_memoria = io.BytesIO()
-                await bot.download(foto, destination=file_in_memoria)
-                file_in_memoria.seek(0)
+                logging.info("New ID, downloading image for Hash check...")
+                memory_file = io.BytesIO()
+                await bot.download(photo, destination=memory_file)
+                memory_file.seek(0)
                 
-                immagine = Image.open(file_in_memoria)
-                hash_corrente = str(imagehash.phash(immagine))
+                image = Image.open(memory_file)
+                current_hash = str(imagehash.phash(image))
 
-                risultato_lento = await database.controllo_hash(id_gruppo, hash_corrente, 'photo')
+                # Slow check using perceptual hash
+                slow_check_result = await database.check_hash(group_id, current_hash, 'photo')
                 
-                if risultato_lento:
-                    doppione_trovato = True
-                    id_messaggio_originale = risultato_lento
-                    logging.info("Doppione trovato tramite Hash")
+                if slow_check_result:
+                    duplicate_found = True
+                    original_message_id = slow_check_result
+                    logging.info("Duplicate found via pHash")
                 else:
-                    await database.aggiungi_al_database(id_gruppo, 'photo', id_univoco_telegram, hash_corrente, id_messaggio)
+                    await database.add_to_database(group_id, 'photo', telegram_unique_id, current_hash, message_id)
 
         except Exception as e:
-            logging.error(f"Errore nell'elaborazione della foto: {e}")
+            logging.error(f"Error processing photo: {e}")
 
-    # --- CASO VIDEO ---
+    # --- VIDEO HANDLING ---
     elif message.video:
         try:
-            id_univoco_telegram = message.video.file_unique_id
-            risultato_veloce = await database.controllo_id(id_gruppo, id_univoco_telegram)
+            telegram_unique_id = message.video.file_unique_id
+            fast_check_result = await database.check_id(group_id, telegram_unique_id)
             
-            if risultato_veloce:
-                doppione_trovato = True
-                id_messaggio_originale = risultato_veloce
-                logging.info("Video doppione trovato tramite ID")
+            if fast_check_result:
+                duplicate_found = True
+                original_message_id = fast_check_result
+                logging.info("Video duplicate found via Telegram ID")
             
             elif message.video.thumbnail:
-                logging.info("ID video nuovo, analizzo la miniatura...")
-                miniatura = message.video.thumbnail
-                file_in_memoria = io.BytesIO()
-                await bot.download(miniatura, destination=file_in_memoria)
-                file_in_memoria.seek(0)
+                logging.info("New video ID, analyzing thumbnail...")
+                thumbnail = message.video.thumbnail
+                memory_file = io.BytesIO()
+                await bot.download(thumbnail, destination=memory_file)
+                memory_file.seek(0)
                 
-                immagine = Image.open(file_in_memoria)
-                hash_corrente = str(imagehash.phash(immagine))
+                image = Image.open(memory_file)
+                current_hash = str(imagehash.phash(image))
 
-                risultato_lento = await database.controllo_hash(id_gruppo, hash_corrente, 'video')
+                slow_check_result = await database.check_hash(group_id, current_hash, 'video')
                 
-                if risultato_lento:
-                    doppione_trovato = True
-                    id_messaggio_originale = risultato_lento
-                    logging.info("Video doppione trovato tramite l'Hash della Miniatura!")
+                if slow_check_result:
+                    duplicate_found = True
+                    original_message_id = slow_check_result
+                    logging.info("Video duplicate found via Thumbnail pHash")
                 else:
-                    await database.aggiungi_al_database(id_gruppo, 'video', id_univoco_telegram, hash_corrente, id_messaggio)
+                    await database.add_to_database(group_id, 'video', telegram_unique_id, current_hash, message_id)
             else:
-                logging.info("Video senza miniatura, salvo solo l'ID nel database.")
-                await database.aggiungi_al_database(id_gruppo, 'video', id_univoco_telegram, "", id_messaggio)
+                logging.info("Video without thumbnail, saving only ID to database.")
+                await database.add_to_database(group_id, 'video', telegram_unique_id, "", message_id)
         except Exception as e:
-            logging.error(f"Errore nell'elaborazione del video: {e}")
+            logging.error(f"Error processing video: {e}")
 
 
     # ==========================================
-    # RISPOSTA FINALE E GESTIONE ERRORI
+    # FINAL RESPONSE AND ERROR HANDLING
     # ==========================================
-    if doppione_trovato and id_messaggio_originale is not None:
+    if duplicate_found and original_message_id is not None:
         try:
             await message.answer(
-                "⚠️ *Attenzione!* Questo file è un doppione.\nEcco il post originale 👇",
+                "⚠️ *Warning!* This file is a duplicate.\nHere is the original post 👇",
                 reply_parameters=types.ReplyParameters(
-                    message_id=id_messaggio_originale,
+                    message_id=original_message_id,
                     allow_sending_without_reply=False
                 ),
                 parse_mode="Markdown",
@@ -201,20 +203,20 @@ async def gestisci_media(message: types.Message, bot: Bot):
         
         except TelegramBadRequest as e:
             if "message to reply not found" in str(e).lower() or "message not found" in str(e).lower() or "reply message not found" in str(e).lower():
-                logging.info(f"Il post originale {id_messaggio_originale} è stato eliminato. Promuovo il nuovo post come originale.")
-                await database.aggiorna_messaggio_originale(id_gruppo, id_messaggio_originale, id_messaggio)
+                logging.info(f"Original post {original_message_id} was deleted. Promoting new post as original.")
+                await database.update_original_message(group_id, original_message_id, message_id)
             else:
-                logging.error(f"Errore di Telegram durante la risposta: {e}")
+                logging.error(f"Telegram error during reply: {e}")
                 
         except Exception as e:
-            logging.error(f"Impossibile inviare il messaggio di avviso: {e}")
+            logging.error(f"Unable to send warning message: {e}")
 
 # ==========================================
-# FUNZIONE PRINCIPALE PER AVVIARE IL BOT
+# MAIN FUNCTION
 # ==========================================
 async def main():
-    print("Il bot è in fase di avvio...")
-    await database.inizializza_database()
+    print("Bot is starting...")
+    await database.initialize_database()
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
