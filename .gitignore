@@ -1,18 +1,26 @@
-# Ambienti virtuali (FONDAMENTALE NON CARICARLO!)
+# Virtual Environments
 venv/
 .venv/
 env/
+ENV/
 
-# File temporanei e cache di Python
+# Python Cache & Bytecode
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 
-# DATI SENSIBILI E TOKEN (FONDAMENTALE!)
+# Environment Variables & Secrets
 .env
 
-# Database locale (non vogliamo caricare i dati dei tuoi utenti online)
+# SQLite Databases
 bot_database.db
 bot_database.db-journal
+*.sqlite3
 
-# Eventuali file di Log
+# Logs
 *.log
+
+# OS & Editor generated files
+.DS_Store
+.vscode/
+.idea/
