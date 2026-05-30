@@ -14,8 +14,8 @@ A Python-based Telegram bot designed to detect and manage duplicate media (photo
 
 ### 1. Clone the repository
 ```bash
-git clone [https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git)
-cd YOUR_REPOSITORY_NAME
+git clone https://github.com/Antonio-Pappalardo/MediaManager_bot.git
+cd MediaManager_bot
 ```
 
 ### 2. Install dependencies
